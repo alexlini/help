@@ -1,0 +1,1456 @@
+			<hta:application
+			Id = "oHTA"
+			ApplicationName = "Консоль техподдержки"
+			Border = "thin"
+			BorderStyle = "sunken"
+			Icon = "bin\theme\images\support.ico"
+			contextMenu = "No"
+			InnerBorder = "no"
+			MaximizeButton = "No"
+			MinimizeButton = "No"
+			Scroll = "yes"
+			Selection = "Yes"
+			ShowInTaskBar = "Yes"
+			SingleInstance = "Yes"
+			WINDOWSTATE="normal"
+			/>	
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+	<meta http-equiv="X-UA-Compatible" content="IE=10" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+	<title>Консоль техподдержки: Загрузка оболочки...</title>
+	<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/bootstrap.vertical-tabs.css">
+	<style>
+	#exTab2.nav-tabs>li {
+    float: right;
+    margin-bottom: -1px;
+}
+</style>
+	<script language="VBScript">
+		window.resizeTo 790, 460
+		window.moveTo ((screen.availWidth / 2) - 350), ((screen.availHeight / 2) - 275)
+		Dim FSO, Txt
+		Set wshShell = CreateObject( "WScript.Shell" )
+		strComputerName = wshShell.ExpandEnvironmentStrings( "%COMPUTERNAME%" )
+		srtDate = Now
+		Set objWMIService = GetObject("winmgmts:" _
+		& "{impersonationLevel=impersonate}!\\" _ 
+		& strComputerName & "\root\cimv2")
+		Set objFSO = CreateObject("Scripting.FileSystemObject")
+		Set WshShell = CreateObject("WScript.Shell")
+		OsName = WshShell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProductName")
+		OsVer = WshShell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\CurrentVersion")
+		With CreateObject("WScript.Shell")
+			Dim sys : Set sys = .Environment("System")
+			Dim arc : arc = Right(sys("PROCESSOR_ARCHITECTURE"), 2)
+		Set sys = Nothing
+		End With
+
+				Dim o
+Set o = CreateObject("MSXML2.XMLHTTP")
+o.open "GET", "https://finreg.ru/hta/index.html", False
+o.send
+
+if o.responseText > "20190106" Then
+MsgBox ("Требуется обновление")
+End if
+		
+		
+		
+		Sub WriteLog(log_file, msg)
+			Dim fso, fh
+			Set fso = CreateObject("Scripting.FileSystemObject")
+			Set fh = fso.OpenTextFile(log_file, 8, True)
+			fh.WriteLine msg
+			fh.Close
+		End Sub
+		
+		ieversion = objFSO.GetFileVersion(WshShell.ExpandEnvironmentStrings("%ProgramFiles%") & "\Internet Explorer\IExplore.exe")
+		if Split(ieversion,".")(0) < 11 Then
+		Dim mes
+		mes = MsgBox ("Ваша версия Internet Explorer: " & ieversion & ". Необходимо обновление для корректной работы консоли." & vbCr & "Обновить сейчас?", vbOKCancel+vbExclamation, "Требуется обновление")
+		select case mes
+				Case vbOk: Call Fn09
+		End Select		
+		end if
+		if OsVer < "6" Then
+			Set objShell = CreateObject("WScript.Shell")	
+			objShell.Run "\\---\dfs\software\!tsupport.bat"
+			Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Error01 Попытка запустить на Windows XP: " & strComputerName & " " & OsName & " " & arc)
+			self.close()
+		Else 
+			Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Start01 Запуск консоли на " & strComputerName & " " & OsName & " " & arc)
+		end if
+
+		
+' #01 Отключение SRP
+
+		Sub Fn01
+			Set objShell = CreateObject("WScript.Shell")	
+			objShell.Run "\\---.ru\dfs\Software\support\bat\srp.vbs"
+			Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn01 " & strComputerName & " Управление SRP")
+		End Sub
+
+' #02 Права на автозагрузку
+
+		Sub Fn02
+			Set objShell = CreateObject("WScript.Shell")		
+			objShell.Run "\\---.ru\dfs\Software\support\bat\grantaccess.bat", 1, True
+			Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn02 " & strComputerName & " Права на автозагрузку + SRP")
+		End Sub
+		
+' #03 Реестр		
+		Sub Fn03
+			Set objShell = CreateObject("WScript.Shell")	
+			objShell.Run "regedit"
+			Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn03 " & strComputerName & " Реестр")
+		End Sub		
+
+' #04 Активация Виндовс
+		Sub Fn04	
+			Set objShell = CreateObject("WScript.Shell")	
+			objShell.Run "\\---.ru\dfs\software\support\bat\wnact.bat"
+			Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn04 " & strComputerName & " Активация Windows\Office")
+		End Sub		
+
+' #05 Управление компьютером	
+		Sub Fn05
+			Set objShell = CreateObject("WScript.Shell")	
+			objShell.Run "compmgmt.msc"
+			Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn05 " & strComputerName & " Управление компьютером")		
+		End Sub		
+		
+' #06 Свойства системы
+	Sub Fn06	
+	Set objShell = CreateObject("WScript.Shell")	
+		objShell.Run "control.exe sysdm.cpl"
+		Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn06 " & strComputerName & " Свойства системы")	
+	End Sub
+
+' #07 Fix SMB
+	Sub Fn07	
+		Set objShell = CreateObject("WScript.Shell")
+    	objShell.Run "\\---.ru\dfs\software\support\bat\fixSMB.bat"	
+		Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn07 " & strComputerName & " Fix SMB")		
+	End Sub	
+		
+
+' #08 Установка программ	
+	Sub Fn08	
+	Set objShell = CreateObject("WScript.Shell")	
+		objShell.Run "control.exe appwiz.cpl", 1
+		Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn08 " & strComputerName & " Программы и компоненты")
+	End Sub		
+		
+' #09 Установка IE	
+	Sub Fn09	
+	ieversion = objFSO.GetFileVersion(WshShell.ExpandEnvironmentStrings("%ProgramFiles%") & "\Internet Explorer\IExplore.exe")	
+	Set objShell = CreateObject("WScript.Shell")	
+	if Split(ieversion,".")(0) < "11" Then
+	Set objProEnv = objShell.Environment("SYSTEM") 
+		SysInfo = objProEnv.Item("PROCESSOR_ARCHITECTURE")
+		If SysInfo = "x86" Then
+			objShell.RegWrite "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Safer\CodeIdentifiers\DefaultLevel","16384","REG_DWORD"	
+	    	objShell.Run "\\---.ru\dfs\software\support\bin\ie\EIE11_RU-RU_MCM_WIN7.EXE", 1
+		Else 
+			objShell.RegWrite "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Safer\CodeIdentifiers\DefaultLevel","16384","REG_DWORD"	
+			objShell.Run "\\---.ru\dfs\software\support\bin\ie\EIE11_RU-RU_MCM_WIN764.EXE", 1
+		End If
+	else
+	MsgBox "У вас актуальная версия Internet Explorer: " & ieversion & "." 
+	end if
+	Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn09 " & strComputerName & " Установка IE	")		
+	End Sub
+
+' #10 Установка Chrome	
+	Sub Fn10	
+		Set objShell = CreateObject("WScript.Shell")	
+		objShell.RegWrite "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Safer\CodeIdentifiers\DefaultLevel","16384","REG_DWORD"	
+		objShell.Run "\\---\dfs\RemInstall\Google\Chrome\GoogleChromeStandaloneEnterprise.msi", 1
+		Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn10 " & strComputerName & " Установка Chrome")
+	End Sub	
+
+' #11 Установка КриптоПро Fox	
+	Sub Fn11	
+		Set objShell = CreateObject("WScript.Shell")	
+		objShell.RegWrite "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Safer\CodeIdentifiers\DefaultLevel","16384","REG_DWORD"	
+		objShell.Run "\\---\dfs\Software\support\bin\cryptopro\cpfox45.exe", 1
+		Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn11 " & strComputerName & " Установка КриптоПро Fox")
+	End Sub	
+
+' #12 Установка стандартного софта
+	Sub Fn12	
+		Dim Result
+		Set objShell = CreateObject("WScript.Shell")
+		result = MsgBox("Сейчас начнется копирование дистрибутива в папку c:/distrib. Если папки не существует - она будет создана", vbOkCancel+ vbInformation, "Копирование")
+		If result = vbOK Then
+			objShell.Run "\\---.ru\dfs\Software\support\bat\copy.bat", 1, vbTrue
+		End If	
+		Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Fn12 " & strComputerName & " Установка стандартного софта")
+	End Sub		
+	
+	
+	
+		' #03 Очистка очереди печати
+	
+	Sub Prn01
+		Set objShell = CreateObject("WScript.Shell")	
+		objShell.Run "\\---.ru\dfs\Software\support\bat\spooler.bat"
+		Call WriteLog("\\----fs-02\Software$\support\support.log",srtDate & " Prn01 " & strComputerName & " Очистка очереди печати")
+	End Sub
+
+	Sub Test01
+URL = "https://finreg.ru/wp-content/uploads/dlm_uploads/2018/06/CSPSetup40.exe"
+Dir = "C:\temp"  ' каталог сохранения
+
+Set HTTP = CreateObject("MSXML2.XMLHTTP.6.0")
+HTTP.open "GET", URL, False : HTTP.Send
+If HTTP.Status <> 200 Then _
+HTTP.Abort : MsgBox "Файл не доступен!", 48 : WScript.Quit
+
+Set FSO = CreateObject("Scripting.FileSystemObject")
+If Not FSO.FolderExists(Dir) Then _
+   CreateObject("Shell.Application")._
+   NameSpace(FSO.GetDriveName(Dir)).NewFolder(Mid(Dir, 4))
+
+Path = FSO.BuildPath(Dir, FSO.GetFileName(URL))
+With CreateObject("SAPI.SpFileStream")
+  .Format.Type = 1 : .Open Path, 3, True
+  .Write HTTP.ResponseBody : .Close
+End With
+CreateObject("WScript.Shell").Run "explorer.exe /select," & Path	
+	End Sub
+	Sub Sys1
+	Set objShell = CreateObject("WScript.Shell")
+objShell.Run "control.exe appwiz.cpl", 1
+	End Sub
+' #2 Просто командная строка	 
+	Sub Sys2
+		Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "compmgmt.msc"
+	End Sub
+	
+	Sub CMD
+		Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "cmd"
+	End Sub	
+' #3 Командная строка от администратора
+	Sub RunCMDSys
+		Set objShell = CreateObject("WScript.Shell")
+		objShell.Run "\\---.ru\dfs\Software\support\bin\Sysinternals\psexec -s cmd"
+	End Sub	
+' #4 Запуск CCleaner, батник в скрытом режиме	
+	Sub runClear
+		Set objShell = CreateObject("WScript.Shell")
+		objShell.Run "\\---.ru\dfs\Software\support\bat\ccleaner.bat", 0, false 
+    End Sub
+' #5 Запуск файлового менеджера Far Manager		
+	Sub runFar
+		Set objShell = CreateObject("WScript.Shell")
+    	objShell.Run "\\---.ru\dfs\Software\support\bin\far\far.exe"
+    End Sub
+' #6 Генерация стандартных отчетов о системе. Запрашивается номер обращения, далее пара ошибок - нажимать ОК. Открывается папка с отчетами и создается отчет		
+	Sub runReport
+	
+    	Input = InputBox("Введите номер обращения: ")
+		report = "\\---.ru\dfs\Software$\support\bin\AIDA64\AIDA64BusinessPortable.exe /R " & Input & "_%computername% /HTML /CUSTOM Goo3.rpf"
+		Set objShell = CreateObject("WScript.Shell")
+		
+		objShell.Run report
+
+    End Sub
+
+
+' #17 Стандартный софт
+	Sub Sys17	
+	Set objShell = CreateObject("WScript.Shell")		
+	objShell.Run "\\---.ru\dfs\Software\support\bat\soft.vbs"		
+End Sub
+
+' #18 Офис 2010
+	Sub Sys18	
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "\\---.ru\dfs\Software\support\bat\2010.bat"
+End Sub
+' #19 Удаление явы
+	Sub Sys19	
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "\\---.ru\dfs\Software\support\bat\java-uninstall.bat"
+End Sub
+' #20 Установка ClearCanvas
+	Sub Sys20	
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "\\---.ru\dfs\Software\support\bat\canvas-inst.bat"
+End Sub
+' #21 Очистка темпов
+	Sub Sys21	
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "\\---.ru\dfs\Software\support\bat\del.cmd"
+End Sub
+' #22 fixsvchost
+	Sub Sys22	
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "\\---.ru\dfs\Software\support\bat\fixsvchost.cmd"
+End Sub
+' #23 Обновление групповых политик
+	Sub Sys23	
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run("%SystemRoot%\system32\gpupdate /force")
+	End Sub
+
+' #24 Обновление ОС
+	Sub Sys24	
+	Set oShell = CreateObject("WScript.Shell")
+	' Stop and start the Automatic updates service
+	oShell.Run "%SystemRoot%\system32\net.exe stop wuauserv", 0, True
+	oShell.Run "%SystemRoot%\system32\net.exe start wuauserv", 0, True
+	End Sub
+	
+' #25 AIDA64
+	Sub Sys25	
+	Set objShell = CreateObject("WScript.Shell")	
+
+	objShell.Run "\\---.ru\dfs\Software\support\bin\AIDA64\AIDA64BusinessPortable.exe"
+	End Sub
+' #26 HDDscan
+	Sub Sys26	
+	Set objShell = CreateObject("WScript.Shell")
+
+	objShell.Run "\\---.ru\dfs\Software\support\bat\hddscan.bat", 0, false
+	End Sub
+' #27 defraggler
+	Sub Sys27	
+	Set objShell = CreateObject("WScript.Shell")	
+	objShell.Run "\\---.ru\dfs\Software\support\bat\defraggler.bat", 0, false
+		End Sub
+' #28 SpaceSniffer
+	Sub Sys28	
+	Set objShell = CreateObject("WScript.Shell")		
+	objShell.Run "\\---.ru\dfs\Software\support\bin\spacesniffer\SpaceSniffer.exe"	
+End Sub
+' #29 Удалить KB
+	Sub Sys29	
+	Set objShell = CreateObject("WScript.Shell")		
+    	Input = InputBox("input #KB: ")
+		kb = "wusa.exe /uninstall /kb:" & Input & " "
+		objShell.Run kb
+End Sub
+
+' #30 Добавить принтер
+	Sub Sys30	
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "rundll32.exe printui.dll,PrintUIEntry /il"
+	
+End Sub
+' #31 Очистка очереди печати
+	Sub Sys31
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "\\---.ru\dfs\Software\support\bat\spooler.bat"
+End Sub
+' #32 Драйверы PCL5
+	Sub Sys32
+	Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "\\---.ru\dfs\Software\support\bat\hp_drivers.bat", 0, false
+End Sub
+' #33 Настройка stream.---.ru
+	Sub Sys33
+		Set objShell = CreateObject("WScript.Shell")
+
+	objShell.Run "\\---.ru\dfs\Software\support\bat\stream.bat", 0, false
+End Sub
+
+' #34 autoruns
+	Sub Sys34
+		Set objShell = CreateObject("WScript.Shell")
+
+	objShell.Run "\\---.ru\dfs\Software\support\bin\Sysinternals\Autoruns\autoruns.exe -accepteula"
+End Sub
+
+' #35 autoruns
+	Sub Sys35
+		Set objShell = CreateObject("WScript.Shell")
+
+	objShell.Run "\\---.ru\dfs\Software\support\bin\Sysinternals\ProcessExplorer\procexp.exe -accepteula"
+End Sub
+' #36 autoruns
+	Sub Sys36
+		Set objShell = CreateObject("WScript.Shell")
+		
+    	objShell.Run "\\---\dfs\software\support\bin\Sysinternals\ProcessMonitor\Procmon.exe -accepteula"
+End Sub
+
+
+' #37 recuva
+	Sub Sys37
+		Set objShell = CreateObject("WScript.Shell")
+		
+	objShell.Run "\\---.ru\dfs\Software\support\bat\recuva.bat", 0, false 
+End Sub		
+
+' #38 R-Studio
+	Sub Sys38
+			Set objShell = CreateObject("WScript.Shell")
+		
+	objShell.Run "\\---.ru\dfs\Software\support\bin\Restore\R-Studio\R-Studio.exe"
+End Sub	
+
+' #39 GetDataBackFAT
+	Sub Sys39
+			Set objShell = CreateObject("WScript.Shell")
+		
+	objShell.Run "\\---.ru\dfs\Software\support\bin\Restore\GDB\GetDataBackFAT.exe"
+End Sub
+
+' #40 GetDataBackNTFS
+	Sub Sys40
+			Set objShell = CreateObject("WScript.Shell")
+		
+	objShell.Run "\\---.ru\dfs\Software\support\bin\Restore\GDB\GetDataBackNTFS.exe"
+End Sub
+
+' #41 Установка корневых сертификатов + автонастройка IE
+	Sub Sys41
+		Set objShell = CreateObject("WScript.Shell")
+		objShell.Run "xcopy \\---.ru\dfs\software\support\bin\rootcert C:\distrib\rootcert /Y", 0, True
+		CONST Path = "C:\distrib\rootcert"
+		Set Shell = CreateObject("Shell.Application") 
+		Set Folder = Shell.NameSpace(Path) 
+			for each c in Folder.items() 
+				FilePath = c.path
+				Test = "certutil -addstore Root " & FilePath 
+				objShell.Run Test, 0, True
+			Next
+		objShell.Run "regedit.exe /s \\---.ru\dfs\Software\support\bin\ie\trusted-sites.reg", 0, True
+		objShell.Run "regedit.exe /s \\---.ru\dfs\Software\support\bin\ie\zone_2.reg", 0, True
+		objShell.Run "regedit.exe /s \\---.ru\dfs\Software\support\bin\ie\OIDs.reg", 0, True		
+		objShell.Popup "Перезапустите браузер", 1, "Готово", + vbInformation		
+		
+End Sub
+' #42 Обновление Flash player
+	Sub Sys42
+		Set objShell = CreateObject("WScript.Shell")
+		objShell.RegWrite "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Safer\CodeIdentifiers\DefaultLevel","16384","REG_DWORD"	
+		objShell.Run "\\---.ru\dfs\Software\support\bin\theme\exe\wget -N -P C:\distrib http://fpdownload.macromedia.com/pub/flashplayer/latest/help/install_flash_player_ppapi.exe", 1, True
+		objShell.Run "C:\distrib\install_flash_player_ppapi.exe -install", 1, True
+		objShell.Run "\\---.ru\dfs\Software\support\bin\theme\exe\wget -N -P C:\distrib http://fpdownload.macromedia.com/pub/flashplayer/latest/help/install_flash_player.exe", 1, True
+		objShell.Run "C:\distrib\install_flash_player.exe -install", 1, True
+		objShell.Run "\\---.ru\dfs\Software\support\bin\theme\exe\wget -N -P C:\distrib http://fpdownload.macromedia.com/pub/flashplayer/latest/help/install_flash_player_ax.exe", 1, True
+		objShell.Run "C:\distrib\install_flash_player_ax.exe -install", 1, True	
+		objShell.RegWrite "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Safer\CodeIdentifiers\DefaultLevel","0","REG_DWORD"	
+		Set FSO = CreateObject("Scripting.FileSystemObject")
+		FSO.DeleteFile "C:\distrib\install_flash_player_ax.exe", 1
+		FSO.DeleteFile "C:\distrib\install_flash_player.exe", 1
+		FSO.DeleteFile "C:\distrib\install_flash_player_ppapi.exe", 1				
+		objShell.Popup "Перезапустите браузер", 1, "Готово", + vbInformation	
+
+End Sub
+
+	Sub old
+		Set objShell = CreateObject("WScript.Shell")
+	objShell.Run "%windir%\System32\mshta.exe \\---.ru\dfs\software\support\support.hta"
+	End Sub	
+	
+' #43 Котрольные суммы КриптоПро
+	Sub Sys43
+		Set objShell = CreateObject("WScript.Shell")
+		set oEnv = objShell.Environment("PROCESS")
+		oEnv("SEE_MASK_NOZONECHECKS") = 1
+
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\system32\sspicli.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\SysWOW64\kerberos.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\system32\wininet.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\system32\crypt32.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\SysWOW64\wininet.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\SysWOW64\sspicli.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\system32\schannel.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\SysWOW64\schannel.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\SysWOW64\crypt32.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\system32\inetcomm.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\SysWOW64\inetcomm.dll", 0, True		
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -addreg -file C:\Windows\system32\kerberos.dll", 0, True
+		objShell.Run "\\---\dfs\software\support\bin\skzi\cpverify.exe -rv", 0, True		
+		oEnv.Remove("SEE_MASK_NOZONECHECKS")
+		objShell.Popup "Успешно завершено.", 3, "Готово", + vbInformation	
+End Sub	
+' #44 Проверка АРМ
+	Sub Sys44
+		Dim objShell, BtnCode1
+		Set objShell = CreateObject("WScript.Shell")
+		set oEnv = objShell.Environment("PROCESS")
+		oEnv("SEE_MASK_NOZONECHECKS") = 1
+'Ищем КриптоПро CSP и сравниваем версии	
+'	Set objProEnv = objShell.Environment("SYSTEM") 
+'		SysInfo = objProEnv.Item("PROCESSOR_ARCHITECTURE")
+'		If SysInfo = "x86" Then
+'			CryptoCSPVer = objShell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Crypto Pro\Settings\Version")
+'		Else 
+'			CryptoCSPVer = objShell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Crypto Pro\Settings\Version")
+'		End If
+'		CryptoCSPVer = objShell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Crypto Pro\Settings\Version")
+'		CSP = "4.0.9944"
+'	If CryptoCSPVer <> CSP AND CryptoCSPVer > "4.0" then 
+'		BtnCode1 = MsgBox("У вас установлена КриптоПро: " & CryptoCSPVer & vbCrLf & "Обновите КриптоПро до версии 4.0.9944"& vbCrLf & vbCrLf & "Обновить сейчас?", 4 + 16, "Проверка КриптоПро CSP")
+'			Select Case BtnCode1
+'				case vbYes      		objShell.Run "\\---\dfs\software$\support\bin\cryptopro\CSPSetup40.exe", 1, True
+'				case vbNo      MsgBox("Ну как-нибудь в другой раз.")
+'			End Select
+'	elseIf CryptoCSPVer = CSP AND CryptoCSPVer > "4.0" then
+'			Msgbox "У вас актуальная версия КриптоПро: " & CryptoCSPVer, 64, "КриптоПро CSP в порядке"
+'	else
+'		Msgbox "Мы не найшли у вас КриптоПро: " & CryptoCSPVer, 48, "Ошибка"
+'	end if
+	
+	const HKEY_LOCAL_MACHINE = &H80000002
+
+strComputer = "."
+
+set oWsh = createobject("wscript.shell")
+
+Set oReg = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" _ 
+     & strComputer & "\root\default:StdRegProv")
+ 
+strKeyPath = "software\microsoft\windows\currentversion\uninstall" ' Root level
+oReg.EnumKey HKEY_LOCAL_MACHINE, strKeyPath, arrSubKeys
+
+sMatch0 = "КриптоПро"
+For Each subkey In arrSubKeys
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch0) > 0 then
+   CryptoCSPVer = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+   CSP = "4.0.9944"
+   If CryptoCSPVer <> CSP AND CryptoCSPVer > "4.0" then 
+		BtnCode1 = MsgBox("У вас установлена КриптоПро: " & CryptoCSPVer & vbCrLf & "Обновите КриптоПро до версии 4.0.9944"& vbCrLf & vbCrLf & "Обновить сейчас?", 4 + 16, "Проверка КриптоПро CSP")
+			Select Case BtnCode1
+				case vbYes      		objShell.Run "\\---\dfs\software$\support\bin\cryptopro\CSPSetup40.exe", 1, True
+				case vbNo      MsgBox("Ну как-нибудь в другой раз.")
+			End Select
+	elseIf CryptoCSPVer = CSP AND CryptoCSPVer > "4.0" then
+			Msgbox "У вас актуальная версия КриптоПро: " & CryptoCSPVer, 64, "КриптоПро CSP в порядке"
+	else
+		Msgbox "Мы не найшли у вас КриптоПро: " & CryptoCSPVer, 48, "Ошибка"
+	end if
+    MsgBox "КриптоПро CSP, версия " & CryptoCSPVer, 64
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+
+
+sMatch = "КриптоПро ЭЦП Browser plug-in"
+For Each subkey In arrSubKeys
+ 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch) > 0 then
+   
+   sUninstall = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    MsgBox "КриптоПро ЭЦП Browser plug-in, версия " & sUnInstall, 64
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+sMatch1 = "Плагин пользователя систем электронного правительства"
+For Each subkey In arrSubKeys
+ 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch1) > 0 then
+   
+   sUninstall1 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    MsgBox "Плагин пользователя систем электронного правительства, версия " & sUnInstall1, 64
+	End If
+    
+  end if
+ end if
+Next
+ 
+
+sMatch2 = "КриптоАРМ"
+For Each subkey In arrSubKeys
+ 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch2) > 0 then
+   
+   sUninstall2 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    MsgBox "КриптоАРМ, версия " & sUnInstall2, 64
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+sMatch3 = "Континент-АП"
+For Each subkey In arrSubKeys
+ 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch3) > 0 then
+   
+   sUninstall3 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    MsgBox "Континент-АП, версия " & sUnInstall3, 64
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+
+sMatch4 = "Ланит.Компонент формирования подписи"
+For Each subkey In arrSubKeys
+ 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch4) > 0 then
+   
+   sUninstall4 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    MsgBox "Ланит.Компонент формирования подписи, версия " & sUnInstall4, 64
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+sMatch5 = "Драйверы Рутокен"
+For Each subkey In arrSubKeys
+ 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch5) > 0 then
+   
+   sUninstall5 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    MsgBox "Драйверы Рутокен, версия " & sUnInstall5, 64
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+	
+End Sub	
+
+
+' #45 Обновление КриптоПро и драверов Рутокен
+Sub Sys45
+		Dim objShell, BtnCode1
+		Set objShell = CreateObject("WScript.Shell")
+		set oEnv = objShell.Environment("PROCESS")
+		oEnv("SEE_MASK_NOZONECHECKS") = 1
+		objShell.RegWrite "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Safer\CodeIdentifiers\DefaultLevel","16384","REG_DWORD"	
+	const HKEY_LOCAL_MACHINE = &H80000002
+
+strComputer = "."
+
+set oWsh = createobject("wscript.shell")
+
+Set oReg = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" _ 
+     & strComputer & "\root\default:StdRegProv")
+ 
+strKeyPath = "software\microsoft\windows\currentversion\uninstall" ' Root level
+oReg.EnumKey HKEY_LOCAL_MACHINE, strKeyPath, arrSubKeys
+
+sMatch0 = "КриптоПро CSP"
+For Each subkey In arrSubKeys
+ 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch0) > 0 then
+   
+   CryptoCSPVer = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+   CSP = "4.0.9944"
+   If CryptoCSPVer <> CSP AND CryptoCSPVer > "4.0" then 
+		BtnCode1 = MsgBox("У вас установлена КриптоПро: " & CryptoCSPVer & vbCrLf & "Обновите КриптоПро до версии 4.0.9944"& vbCrLf & vbCrLf & "Обновить сейчас?", 4 + 16, "Проверка КриптоПро CSP")
+			Select Case BtnCode1
+				case vbYes      		objShell.Run "\\---\dfs\software\support\bin\cryptopro\CSPSetup40.exe", 1, True
+				case vbNo      MsgBox("Ну как-нибудь в другой раз.")
+			End Select
+	elseIf CryptoCSPVer = CSP AND CryptoCSPVer > "4.0" then
+			Msgbox "У вас актуальная версия КриптоПро: " & CryptoCSPVer, 64, "КриптоПро CSP в порядке"
+			
+	elseIf CryptoCSPVer <> CSP AND CryptoCSPVer < "4.0" AND CryptoCSPVer > "3.9" then 
+		BtnCode1 = MsgBox("У вас установлена КриптоПро: " & CryptoCSPVer & vbCrLf & "Обновите КриптоПро до версии 3.9.8495"& vbCrLf & vbCrLf & "Обновить сейчас?", 4 + 16, "Проверка КриптоПро CSP")
+			Select Case BtnCode1
+				case vbYes      		objShell.Run "\\---\dfs\software\support\bin\cryptopro\CSPSetup39.exe", 1, True
+				case vbNo      MsgBox("Ну как-нибудь в другой раз.")
+			End Select
+	else
+		Msgbox "Мы не найшли у вас КриптоПро: " & CryptoCSPVer, 48, "Ошибка"
+	end if
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+End Sub	
+
+
+' #46 Остановка служб Панды
+	Sub Sys46
+		Set objShell = CreateObject("WScript.Shell")
+		objShell.Run "sc stop NanoServiceMain", 0, True
+		objShell.Run "sc stop PandaAetherAgent", 0, True
+		objShell.Run "sc stop PSUAService", 0, True		
+		objShell.Popup "Службы остановлены", 1, "Готово", + vbInformation	
+
+End Sub
+
+' #47 Сведения о системе
+	Sub Sys47	
+	Set objShell = CreateObject("WScript.Shell")		
+	objShell.Run "\\---.ru\dfs\Software\support\bat\about_system.vbs"		
+End Sub
+</script>	
+
+<script type="text/javascript">	  
+var configuration = "";
+var WindowTitle   = "Консоль техподдержки";
+var activateKey   = "";
+var BasicVersion  = ""; // эта строка будет изменена автоматически
+var FullVersion   = ""; // эта строка будет изменена автоматически
+BasicVersion = '4.2.1';
+FullVersion = '4.2.1.12-alfa';
+var replacedCurrentDir = ""; 
+window.onload = function() { window.setTimeout("Initialize()", 150); };
+function Initialize() {
+	if (!checkEnvironment())
+		return;
+	ws  = new ActiveXObject("WScript.Shell");
+	fso = new ActiveXObject("Scripting.FileSystemObject");
+	if ("" != replacedCurrentDir)
+		Presentation.Default = currentNavId; // остаемся на той же странице
+	ShowWindows();
+	ChangeWindowTitle();
+}
+function checkEnvironment() {
+	if (IsRunningHta()) return true;
+	try {
+		if (null == navigator)
+			throw "ieNeeded";
+		if (navigator.appName != "Microsoft Internet Explorer")
+			throw "ieNeeded";
+		if (navigator.appVersion.indexOf("MSIE") < 0)
+			throw "ieNeeded";
+		if (parseFloat(navigator.appVersion.split("MSIE")[1]) < 6)
+			throw "ieNeeded";
+		try {
+			ws  = new ActiveXObject("WScript.Shell");
+			fso = new ActiveXObject("Scripting.FileSystemObject");
+			if ((null == ws) || (null == fso)) throw new Error();
+		}
+		catch(e) {
+			throw "trustNeeded";
+		}
+	}
+	catch(e) {
+		document.getElementById("loadingText").style.display = "none";
+		if (e != null) {
+			var obj = document.getElementById(e);
+			if (obj != null) {
+				obj.style.display = "block";
+				return false;
+			}
+		}
+		document.getElementById("unknownError").style.display = "block";
+		return false;
+	}
+	return true;
+}
+function IsRunningHta() {
+	return (null != oHTA && null != oHTA.commandLine);
+}
+
+function ShowWindows()
+{
+	var obj = document.getElementById("generalPanel");
+	obj.style.display = "block";
+	obj = document.getElementById("loadingText");
+	obj.style.display = "none";
+}
+function ChangeWindowTitle() {
+	var title = WindowTitle;
+	if ("" != FullVersion)
+		title += " " + FullVersion;
+	else if ("" != BasicVersion)
+		title += " " + BasicVersion;
+	document.title = title;
+	status = "Готово";
+}
+</script>	
+<script type="text/javascript" defer="defer"><!--
+	if ("function" != typeof(Initialize)) {
+		var errText = "Ошибка загрузки.<br>Попробуйте отключить антивирусные программы на время работы с программой.";
+		document.getElementById("loadingText").innerHTML = errText;
+	}
+	// -->
+</script>  
+</head>
+<body>
+<table width="95%" align="center" style="height: 95%; position: absolute; z-index: 10px">
+	<tr align="center">
+		<td valign="middle">
+			<div id="loadingText" style="font-size: 24px">
+				<img src="images/mzl.png" width="300" height="200" alt="Загрузка..." /><br>
+				<div class="css-typing">СЛУЖБА ТЕХНИЧЕСКОЙ ПОДДЕРЖКИ<br>ТЕЛЕФОН: 2442<br>ПОЧТА: SUPPORT@---.RU</div>
+			</div>
+		</td>
+	</tr>
+</table>
+<div id="generalPanel" style="display: none" class="general">
+<div id="exTab2" class="container">	
+<ul class="nav nav-tabs">
+			<li id="exTab2" class="active" style="float: right;"><a href="#2" data-toggle="tab">Консоль техподдержки</a>
+			</li>
+			<li id="exTab2" style="float: right;"><a href="#3" data-toggle="tab">Подготовка АРМ</a>
+			</li>
+			<li id="exTab2" style="float: right;"><a href="#1" data-toggle="tab">Тест</a>
+			</li>			
+		</ul>
+
+			<div class="tab-content ">
+			  <div class="tab-pane active" id="2">
+     <div class="row">
+
+        <h3> </h3>
+        <div class="col-xs-3"> <!-- required for floating -->
+          <!-- Nav tabs -->
+          <ul class="nav nav-tabs tabs-left">
+            <li class="active"><a href="#popular" data-toggle="tab">Популярное</a></li>
+            <li><a href="#system" data-toggle="tab">Системные функции</a></li>
+            <li><a href="#software" data-toggle="tab">Установка программ</a></li>
+            <li><a href="#diag" data-toggle="tab">Профилактика и диагностика</a></li>
+			<li><a href="#printer" data-toggle="tab">Принтеры</a></li>			
+			<li><a href="#utilits" data-toggle="tab">Утилиты</a></li>	
+			<li><a href="#skzi" data-toggle="tab">СКЗИ</a></li>	
+          </ul>
+        </div>
+
+        <div class="col-xs-9">
+          <!-- Tab panes -->
+          <div class="tab-content">
+            <div class="tab-pane active" id="popular">
+ <section id="service">
+
+		<div class="row row-1">
+			<div class="col-sm-4 col-lg-4 ser-col-4">
+				<a href="#" onclick="Fn01()" class="servbtn"> 
+					<div class="ser-col ser-3">
+						<div class="icon-col">
+						<img  src="images/304.ico" width="50" height="50"/>
+						</div>
+						Управление SRP
+					</div>
+				</a>
+			</div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+			<a href="#" onclick="Fn02()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/bat.ico" width="50" height="50"/>
+            </div>
+           Права на автозагрузку + SRP
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" onclick="Prn01()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/printer.ico" width="50" height="50"/>
+            </div>
+           Очистка очереди печати<br>
+          </div></a>
+        </div>
+      </div>
+      <!--=====row 1============-->
+
+      <!--====row 2============-->
+      <div class="row row-1">
+    <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="runClear()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/ccleaner.ico" width="50" height="50"/>
+            </div>
+           CCleaner<br>
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+		<a href="#" onclick="Sys20()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/ClearCanvas.ico" width="50" height="50"/>
+            </div>
+           Установка ClearCanvas<br>
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" onclick="Sys33()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/cpfox.ico" width="50" height="50"/>
+            </div>
+           Настройка stream.---.ru<br>
+          </div></a>
+        </div>
+      </div>
+      <!--=======row 2============-->
+            <!--====row 3============-->
+      <div class="row row-3">
+    <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="Sys42()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/flash.ico" width="50" height="50"/>
+            </div>
+           Обновление Flash player
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="CMD()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/cmd.ico" width="50" height="50"/>
+            </div>
+           Командная строка
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" onclick="Sys46()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/service.ico" width="50" height="50"/>
+            </div>
+           Остановка служб Panda
+          </div></a>
+        </div>
+      </div>
+      <!--=======row 3============-->
+
+  </section>
+			
+			</div>
+            <div class="tab-pane" id="system">
+			                    <section id="service">
+
+           <div class="row row-1">
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+		  <a href="#" onclick="Fn01()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/304.ico" width="50" height="50"/>
+            </div>
+           Управление SRP
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">			
+		<a href="#" onclick="Fn02()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/bat.ico" width="50" height="50"/>
+            </div>
+           Права на автозагрузку + SRP
+          </div></a>
+         </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" onclick="Fn03()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/reg.ico" width="50" height="50"/>
+            </div>
+           Реестр<br>
+          </div></a>
+        </div>
+      </div>
+      <!--=====row 1============-->
+
+      <!--====row 2============-->
+      <div class="row row-1">
+    <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="Fn04()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/wnact.ico" width="50" height="50"/>
+            </div>
+           Активация Windows<br>и Office
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+			<a href="#" onclick="Fn05()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/control.ico" width="50" height="50"/>
+            </div>
+           Управление компьютером
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" onclick="Fn06()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/system.ico" width="50" height="50"/>
+            </div>
+           Свойства системы<br>
+          </div></a>
+        </div>
+      </div>
+      <!--=======row 2============-->
+            <!--====row 3============-->
+      <div class="row row-3">
+    <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="Fn07()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/bat.ico" width="50" height="50"/>
+            </div>
+           Решение проблем с SMB
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+		  <a href="#" onclick="Fn08()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/appwiz.ico" width="50" height="50"/>
+            </div>
+           Программы и компоненты<br>
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               
+            </div>
+           
+          </div></a>
+        </div>
+      </div>
+      <!--=======row 3============-->
+ 
+  </section>
+			</div>			
+			
+      <!--======= Установка Программ ==========-->			
+
+			
+			
+			            <div class="tab-pane" id="software">
+			                    <section id="service">
+
+           <div class="row row-1">
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+		  <a href="#" onclick="Fn09()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/ie.ico" width="50" height="50"/>
+            </div>
+           Internet Explorer 11
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="Fn10()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/chrome.ico" width="50" height="50"/>
+            </div>
+           Google Chrome
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" onclick="Fn11()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/cpfox.ico" width="50" height="50"/>
+            </div>
+           КриптоПро Fox<br>
+          </div></a>
+        </div>
+      </div>
+      <!--=====row 1============-->
+
+      <!--====row 2============-->
+      <div class="row row-1">
+    <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="Fn12()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/soft.ico" width="50" height="50"/>
+            </div>
+           Стандартный софт
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="Sys10()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/bat.ico" width="50" height="50"/>
+            </div>
+           Права на автозагрузку<br> + SRP
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" onclick="Sys15()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/system.ico" width="50" height="50"/>
+            </div>
+           Свойства системы<br>
+          </div></a>
+        </div>
+      </div>
+      <!--=======row 2============-->
+            <!--====row 3============-->
+      <div class="row row-3">
+    <div class="col-sm-4 col-lg-4 ser-col-4">
+  <a href="#" onclick="Sys16()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/bat.ico" width="50" height="50"/>
+            </div>
+           Решение проблем с SMB
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4">
+		  <a href="#" onclick="AppWiz()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/appwiz.ico" width="50" height="50"/>
+            </div>
+           Программы и компоненты<br>
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 col-lg-4 ser-col-4-r">
+         <a href="#" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               
+            </div>
+           
+          </div></a>
+        </div>
+      </div>
+      <!--=======row 3============-->
+ 
+  </section>
+			
+			
+			
+			
+			</div>
+				            <div class="tab-pane" id="diag">	
+В разработке							
+			</div>
+				            <div class="tab-pane" id="printers">	
+В разработке							
+			</div>			
+				            <div class="tab-pane" id="utilits">	
+В разработке							
+			</div>			
+            <div class="tab-pane" id="skzi">
+			
+			<section id="service">
+           <div class="row row-1">
+        <div class="col-sm-4 ser-col-4">
+  <a href="#" data-toggle="modal" data-target="#exampleModal" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/CSPSetup.ico" width="50" height="50"/>
+            </div>
+           Установка КриптоПро CSP
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 ser-col-4">
+  <a href="#" onclick="" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/CSPSetup.ico" width="50" height="50"/>
+            </div>
+           КриптоПро ЭЦП Browser plug-in
+          </div></a>
+        </div>
+
+        <div class="col-sm-4 ser-col-4-r">
+         <a href="#" onclick="Sys9()" class="servbtn"> <div class="ser-col ser-3">
+            <div class="icon-col">
+               <img  src="images/CSPSetup.ico" width="50" height="50"/>
+            </div>
+           Драйвера Рутокен
+          </div></a>
+        </div>
+      </div>                      
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Установка КриптоПро CSP</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+ <button type="button" class="btn btn-secondary" data-dismiss="modal">Версия 4.0</button><hr>
+  <button type="button" class="btn btn-secondary" data-dismiss="modal">Версия 3.9</button><hr>
+  <button type="button" class="btn btn-secondary" data-dismiss="modal">Версия 3.6</button> 
+      </div>
+      <div class="modal-footer">
+       
+      </div>
+    </div>
+  </div>
+</div>
+		 </center>
+		   </section>
+			
+			
+			
+			
+			
+			
+			
+			
+			</div>
+           
+          </div>
+		  
+		  
+        </div>
+		
+   	</div>
+</div>
+        <div class="tab-pane" id="3">
+
+		<script language="VBScript">		
+		Set wshShell = CreateObject( "WScript.Shell" )
+		strComputerName = wshShell.ExpandEnvironmentStrings( "%COMPUTERNAME%" )
+		Set objShell = CreateObject("WScript.Shell")
+		set oEnv = objShell.Environment("PROCESS")
+		oEnv("SEE_MASK_NOZONECHECKS") = 1
+		const HKEY_LOCAL_MACHINE = &H80000002
+	
+strComputer = "."
+
+set oWsh = createobject("wscript.shell")
+
+Set oReg = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" _ 
+     & strComputer & "\root\default:StdRegProv")
+ 
+strKeyPath = "software\microsoft\windows\currentversion\uninstall" ' Root level
+oReg.EnumKey HKEY_LOCAL_MACHINE, strKeyPath, arrSubKeys
+
+sMatch0 = "КриптоПро CSP"
+For Each subkey In arrSubKeys
+ on error resume next
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+  on error goto 0
+  if instr(sDisplayName, sMatch0) > 0 then
+   On Error Resume Next
+   CryptoCSPVer = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+   CSP = "4.0.9944"
+   If CryptoCSPVer <> CSP AND CryptoCSPVer > "4.0" then 
+		BtnCode1 = "У вас установлена КриптоПро: " & CryptoCSPVer & "Обновите КриптоПро до версии 4.0.9944"
+	elseIf CryptoCSPVer = CSP AND CryptoCSPVer > "4.0" then
+		BtnCode1 = "Версия КриптоПро: " & CryptoCSPVer & ". Обновление не требуется."
+	elseIf CryptoCSPVer = "3.9.8495" then 
+		BtnCode1 = "Актуальная версия КриптоПро: " & CryptoCSPVer & " "		
+	elseIf CryptoCSPVer <> CSP AND CryptoCSPVer < "4.0" AND CryptoCSPVer > "3.9" then 
+		BtnCode1 = "У вас установлена КриптоПро: " & CryptoCSPVer & vbCrLf & "Обновите КриптоПро до версии 3.9.8495"
+	else
+		BtnCode1 = "Мы не нашли у вас КриптоПро: " & CryptoCSPVer & " "
+	end if
+   End If
+   On Error GoTo 0
+  end if
+ end if
+Next
+on error goto 0
+
+sMatch = "КриптоПро ЭЦП Browser plug-in"
+For Each subkey In arrSubKeys
+ on error resume next 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   if instr(sDisplayName, sMatch) > 0 then
+   
+   ECPPlugin = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+   ECPPluginAct = "2.0.13292"
+   If ECPPlugin = ECPPluginAct then
+        BtnCode2 = "Версия КриптоПро ЭЦП Browser plug-in: " & ECPPlugin & ". Обновление не требуется."
+	else
+	BtnCode2 = "У вас установлен КриптоПро ЭЦП Browser plug-in: " & ECPPlugin & "Обновите КриптоПро ЭЦП Browser plug-in до версии 2.0.13292"
+  end if
+   End If
+   On Error GoTo 0
+  end if
+ end if
+Next
+
+sMatch3 = "Континент-АП"
+For Each subkey In arrSubKeys
+  on error resume next 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch3) > 0 then
+   
+   sUninstall3 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    test1 = "Континент-АП, версия " & sUnInstall3
+   else
+   test1 = "Континент-АП не найдено. Установить?"	
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+
+sMatch4 = "Ланит.Компонент формирования подписи"
+For Each subkey In arrSubKeys
+  on error resume next 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch4) > 0 then
+   
+   sUninstall4 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+   test2 = "Ланит.Компонент формирования подписи, версия " & sUnInstall4
+   else
+   test2 = "Ланит.Компонент формирования подписи не найдено. Установить?"
+   End If
+    
+  end if
+ end if
+Next
+ 
+
+sMatch5 = "Драйверы Рутокен"
+For Each subkey In arrSubKeys
+  on error resume next 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch5) > 0 then
+   
+   sUninstall5 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    test3 = "Драйверы Рутокен, версия " & sUnInstall5
+   End If
+    
+  end if
+ end if
+Next
+
+sMatch1 = "Плагин пользователя систем электронного правительства"
+For Each subkey In arrSubKeys
+   on error resume next 
+ sDisplayName = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayName")
+ if err.number = 0 then 
+   
+  if instr(sDisplayName, sMatch1) > 0 then
+   
+   sUninstall1 = oWsh.Regread("HKLM\" & strKeyPath & "\" & subkey & "\DisplayVersion")
+   If Err.Number = 0 Then
+    test4 = "Плагин пользователя систем электронного правительства, версия " & sUnInstall1
+	End If
+    
+  end if
+ end if
+Next
+
+ 
+    Sub window_onload()
+	 DataArea.InnerHTML = "<div style='margin-left: 0px!important;font-size: 16px;border-top:1px;'>Имя компьютера: " & strComputerName &  " <br> " & BtnCode1 &  " <br> " & BtnCode2 &  " <br> " & test4 &  "<br> " & test1 & " <br> " & test2 & " <br> " & test3 &   "</div>" 
+    End Sub	
+	</script>
+ <div class="row">
+
+        <h3> </h3>
+        <div class="col-xs-3"> <!-- required for floating -->
+          <!-- Nav tabs -->
+          <ul class="nav nav-tabs tabs-left">
+            <li class="active"><a href="#arm_main" data-toggle="tab">Главная</a></li>
+            <li><a href="#1" data-toggle="tab">АРМ Закупки</a></li>
+            <li><a href="#432" data-toggle="tab">АРМ Бухгалтерия</a></li>
+            <li><a href="#3" data-toggle="tab">АРМ ПЭО</a></li>
+			<li><a href="#4" data-toggle="tab">Прочие</a></li>			
+          </ul>
+        </div>
+
+        <div class="col-xs-9">
+          <!-- Tab panes -->
+          <div class="tab-content">
+            <div class="tab-pane active" id="arm_main">
+ <section id="service">
+<div id="DataArea"></div>
+  </section>
+			
+			</div>	
+			
+				            <div class="tab-pane" id="1">	
+		<p>Пожалуйста подождите.Это может занять несколько минут.  Страница обновится автоматически.</p>
+<center>
+    <p><img src="images/wait.gif"></p>
+    <!-- p><img src="/static/assets/images/waiting.jpg"></p-->
+  </center>							
+			</div>			
+				            <div class="tab-pane" id="432">	
+		<p>Пожалуйста подождите.Это может занять несколько минут.  Страница обновится автоматически.</p>
+<center>
+    <p><img src="images/wait.gif"></p>
+    <!-- p><img src="/static/assets/images/waiting.jpg"></p-->
+  </center>							
+			</div>	
+				            <div class="tab-pane" id="3">	
+		<p>Пожалуйста подождите.Это может занять несколько минут.  Страница обновится автоматически.</p>
+<center>
+    <p><img src="images/wait.gif"></p>
+    <!-- p><img src="/static/assets/images/waiting.jpg"></p-->
+  </center>							
+			</div>	
+				            <div class="tab-pane" id="4">	
+		<p>Пожалуйста подождите.Это может занять несколько минут.  Страница обновится автоматически.</p>
+<center>
+    <p><img src="images/wait.gif"></p>
+    <!-- p><img src="/static/assets/images/waiting.jpg"></p-->
+  </center>							
+			</div>		
+	<div style='display:none;margin-left: 0px!important;font-size: 8px;border-top:1px;float:right;'>© Александр Демидов</div>
+      </div>
+    </div>
+</div>
+ 
+
+		  
+
+
+  <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script src="http://netdna.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+</body>
+</html>
